@@ -1,139 +1,92 @@
+// Le "package" est un moyen d'organiser vos classes en dossiers logiques.
+// C'est comme le chemin d'accès à votre fichier.
 package com.mycompany.tennis;
 
-// Importation des classes nécessaires pour la gestion du pool de connexions et des opérations SQL.
-import org.apache.commons.dbcp2.BasicDataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+// Importation des classes nécessaires pour ce fichier. On les "importe" pour pouvoir les utiliser.
+import com.mycompany.tennis.entity.Joueur; // On a besoin de la classe 'Joueur' pour créer des objets de ce type.
+import com.mycompany.tennis.repository.JoueurRepositoryImpl; // On a besoin de la classe 'JoueurRepositoryImpl' pour interagir avec la base de données.
+import org.apache.commons.dbcp2.BasicDataSource; // On importe l'outil qui gère notre pool de connexions.
+import java.sql.Connection; // On importe la classe 'Connection' qui représente une connexion à la base de données.
+import java.sql.SQLException; // On importe 'SQLException' pour pouvoir gérer les erreurs liées à la base de données.
 
-/**
- * Cette classe gère le pool de connexions à une base de données MySQL
- * en utilisant la bibliothèque Apache Commons DBCP2.
- * Elle contient des méthodes pour effectuer des opérations CRUD (Créer, Lire, Mettre à jour, Supprimer)
- * sur une table 'JOUEUR'.
- */
+// Déclaration de la classe principale 'PoolConnection'. C'est le nom de notre fichier.
 public class PoolConnection {
 
-    // Déclaration de la variable statique dataSource.
-    // 'static' signifie qu'elle est partagée par toutes les instances de la classe.
-    // 'private' signifie qu'elle ne peut être accédée que dans cette classe.
+    // Déclaration de la variable 'dataSource' qui va gérer notre pool de connexions.
+    // 'private' : La variable n'est accessible que dans cette classe.
+    // 'static' : Il n'y a qu'une seule instance de cette variable pour toute l'application.
     private static BasicDataSource dataSource;
 
-    // Le bloc 'static' est exécuté une seule fois, au premier chargement de la classe.
-    // C'est l'endroit idéal pour initialiser le pool de connexions.
+    // Ce bloc 'static' est exécuté une seule fois, au tout début, lorsque la classe est chargée en mémoire.
+    // C'est l'endroit parfait pour initialiser des choses qui ne changent pas, comme notre pool de connexions.
     static {
-        dataSource = new BasicDataSource();
+        dataSource = new BasicDataSource(); // Crée une nouvelle instance de notre gestionnaire de pool.
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver"); // Indique le pilote JDBC pour MySQL.
+        dataSource.setUrl("jdbc:mysql://localhost:3306/tennis?useSSL=false&serverTimezone=Europe/Paris"); // Définit l'adresse et les paramètres de la base de données.
+        dataSource.setUsername("JDBC"); // Nom d'utilisateur de la base de données.
+        dataSource.setPassword("javacore"); // Mot de passe de la base de données.
+        dataSource.setInitialSize(5); // Le nombre de connexions créées au démarrage.
+        dataSource.setMaxTotal(10); // Le nombre maximum de connexions actives en même temps.
+    }
 
-        // --- Configuration du pool de connexions ---
-
-        // 1. Spécification du pilote de connexion JDBC pour MySQL.
-        //    C'est la classe que le pool va utiliser pour créer les connexions physiques.
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-
-        // 2. L'URL de connexion à la base de données.
-        //    Elle contient l'adresse du serveur, le port, le nom de la base de données
-        //    et des paramètres additionnels comme le fuseau horaire.
-        dataSource.setUrl("jdbc:mysql://localhost:3306/tennis?useSSL=false&serverTimezone=Europe/Paris");
-
-        // 3. Le nom d'utilisateur et le mot de passe pour la connexion à la base de données.
-        //    Il est très important de les remplacer par tes propres identifiants.
-        dataSource.setUsername("JDBC");
-        dataSource.setPassword("javacore");
-
-        // 4. Configuration de la taille du pool pour de meilleures performances.
-        //    'InitialSize' définit le nombre de connexions créées au démarrage.
-        //    'MaxTotal' définit le nombre maximum de connexions actives simultanément.
-        dataSource.setInitialSize(5);
-        dataSource.setMaxTotal(10);
+    // Cette méthode publique permet à d'autres classes d'obtenir une connexion depuis notre pool.
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getConnection(); // Renvoie une connexion disponible depuis le pool.
     }
 
     /**
-     * Point d'entrée principal de l'application.
-     * Cette méthode appelle les fonctions pour tester les opérations de base de données.
-     * @param args Arguments de la ligne de commande (non utilisés ici).
+     * Cette méthode 'main' est le point d'entrée de notre programme.
+     * C'est par ici que l'exécution commence. Le code à l'intérieur sera exécuté.
+     * @param args Les arguments passés à la ligne de commande (non utilisés ici).
      */
     public static void main(String... args) {
-        // Appels aux méthodes CRUD pour l'exemple.
-        // Assurez-vous que les identifiants utilisés sont pertinents pour vos données.
-        ajouterJoueur("poinas", "Yannick", 44L, 'H');
-        modifierJoueur("Federer", "Roger", 20L);
-        supprimerJoueur(45L);
-    }
+        // Crée une instance de notre classe 'JoueurRepositoryImpl' pour pouvoir utiliser ses méthodes.
+        JoueurRepositoryImpl joueurDao = new JoueurRepositoryImpl();
 
-    /**
-     * Méthode pour obtenir une connexion depuis le pool.
-     * Le pool gère la création et la réutilisation des connexions pour optimiser les performances.
-     * @return Une connexion prête à l'emploi.
-     * @throws SQLException Si une erreur de base de données se produit lors de l'obtention de la connexion.
-     */
-    private static Connection getConnection() throws SQLException {
-        return dataSource.getConnection();
-    }
+        // Affiche un message dans la console.
+        System.out.println("--- Création d'un joueur ---");
+        // Crée un nouvel objet 'Joueur'.
+        Joueur nouveauJoueur = new Joueur();
+        // Renseigne les attributs du joueur que nous venons de créer.
+        nouveauJoueur.setNom("Djokovic");
+        nouveauJoueur.setPrenom("Novak");
+        nouveauJoueur.setSexe('H');
+        // Appelle la méthode 'create' de notre repository pour ajouter le joueur à la base de données.
+        joueurDao.create(nouveauJoueur);
 
-    /**
-     * Ajoute un nouveau joueur à la base de données.
-     * @param nom Nom du joueur.
-     * @param prenom Prénom du joueur.
-     * @param identifiant Identifiant unique du joueur.
-     * @param sexe Sexe du joueur ('H' pour Homme, 'F' pour Femme).
-     */
-    private static void ajouterJoueur(String nom, String prenom, long identifiant, char sexe) {
-        // Utilisation d'un 'try-with-resources' pour s'assurer que la connexion est fermée automatiquement
-        // à la fin du bloc, même en cas d'erreur.
-        try (Connection conn = getConnection()) {
-            // Création d'une requête préparée pour éviter les injections SQL et améliorer les performances.
-            PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO JOUEUR (ID, NOM, PRENOM, SEXE) VALUES (?, ?, ?, ?)");
-
-            // Attribution des valeurs aux paramètres de la requête.
-            preparedStatement.setLong(1, identifiant);
-            preparedStatement.setString(2, nom);
-            preparedStatement.setString(3, prenom);
-            preparedStatement.setString(4, String.valueOf(sexe));
-
-            // Exécution de la requête de mise à jour (insertion, modification, suppression).
-            int nbEnregistrementsAjoutes = preparedStatement.executeUpdate();
-            System.out.println("Ajout : " + nbEnregistrementsAjoutes + " ligne(s) ajoutée(s).");
-        } catch (SQLException e) {
-            // Affichage de la trace de l'erreur en cas de problème de base de données.
-            e.printStackTrace();
+        // Affiche une ligne vide pour une meilleure lisibilité.
+        System.out.println("\n--- Récupération d'un joueur ---");
+        // Appelle la méthode 'getById' pour récupérer le joueur avec l'ID 1L.
+        // La lettre 'L' indique que c'est un 'Long', le type d'ID que nous utilisons.
+        Joueur joueurRecupere = joueurDao.getById(1L);
+        // Vérifie si un joueur a été trouvé (l'objet n'est pas 'null').
+        if (joueurRecupere != null) {
+            System.out.println("Joueur trouvé : " + joueurRecupere.getNom() + " " + joueurRecupere.getPrenom());
+        } else {
+            System.out.println("Aucun joueur trouvé avec cet ID.");
         }
-    }
 
-    /**
-     * Modifie le nom et le prénom d'un joueur existant.
-     * @param nouveauNom Nouveau nom du joueur.
-     * @param nouveauPrenom Nouveau prénom du joueur.
-     * @param identifiant Identifiant du joueur à modifier.
-     */
-    private static void modifierJoueur(String nouveauNom, String nouveauPrenom, long identifiant) {
-        try (Connection conn = getConnection()) {
-            PreparedStatement preparedStatement = conn.prepareStatement("UPDATE JOUEUR SET NOM=?, PRENOM=? WHERE ID=?");
-
-            preparedStatement.setString(1, nouveauNom);
-            preparedStatement.setString(2, nouveauPrenom);
-            preparedStatement.setLong(3, identifiant);
-
-            int nbEnregistrementsModifies = preparedStatement.executeUpdate();
-            System.out.println("Modification : " + nbEnregistrementsModifies + " ligne(s) modifiée(s).");
-        } catch (SQLException e) {
-            e.printStackTrace();
+        // Affiche une ligne vide.
+        System.out.println("\n--- Modification d'un joueur ---");
+        // Vérifie si le joueur à modifier a bien été récupéré.
+        if (joueurRecupere != null) {
+            // Modifie le nom et le prénom de l'objet 'joueurRecupere'.
+            joueurRecupere.setNom("Nadal");
+            joueurRecupere.setPrenom("Rafael");
+            // Appelle la méthode 'update' pour enregistrer les modifications dans la base de données.
+            joueurDao.update(joueurRecupere);
         }
-    }
 
-    /**
-     * Supprime un joueur de la base de données.
-     * @param identifiant Identifiant du joueur à supprimer.
-     */
-    private static void supprimerJoueur(long identifiant) {
-        try (Connection conn = getConnection()) {
-            PreparedStatement preparedStatement = conn.prepareStatement("DELETE FROM JOUEUR WHERE ID=?");
+        // Affiche une ligne vide.
+        System.out.println("\n--- Suppression d'un joueur ---");
+        // Appelle la méthode 'delete' pour supprimer le joueur avec l'ID 2L.
+        joueurDao.delete(2L);
 
-            preparedStatement.setLong(1, identifiant);
-
-            int nbLignesSupprimees = preparedStatement.executeUpdate();
-            System.out.println("Suppression : " + nbLignesSupprimees + " ligne(s) supprimée(s).");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        // Affiche une ligne vide.
+        System.out.println("\n--- Liste de tous les joueurs ---");
+        // Appelle la méthode 'listAll' qui renvoie une liste de tous les joueurs.
+        // '.forEach' est une boucle qui parcourt chaque élément de la liste.
+        // Pour chaque 'joueur' dans la liste, il exécute le code entre les accolades.
+        joueurDao.listAll().forEach(joueur -> System.out.println(joueur.getNom() + " " + joueur.getPrenom()));
     }
 }
