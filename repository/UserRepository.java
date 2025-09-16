@@ -222,8 +222,8 @@ public class UserRepository {
     }
 
     // Déclaration de la méthode publique 'saveAll'.
-// Elle retourne 'true' si l'opération a réussi, 'false' sinon.
-// Elle prend en paramètre une liste d'objets 'Utilisateur' à sauvegarder.
+    // Elle retourne 'true' si l'opération a réussi, 'false' sinon.
+    // Elle prend en paramètre une liste d'objets 'Utilisateur' à sauvegarder.
     public boolean saveAll(List<Utilisateur> utilisateurs) {
         // Déclaration d'une chaîne de caractères (String) qui contient la requête SQL.
         // '?' est un espace réservé pour les valeurs qui seront ajoutées plus tard.
