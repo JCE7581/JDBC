@@ -5,6 +5,8 @@ import config.HikariDataSourceExample;
 // 📦 Importation de la classe Utilisateur, qui représente une ligne de la table "utilisateurs"
 import model.Utilisateur;
 
+import java.util.ArrayList;
+
 // 📦 Importation du UserRepository, qui contient toutes les méthodes pour interagir avec la base de données
 import repository.UserRepository;
 
@@ -37,6 +39,7 @@ public class ConsoleMenu {
             System.out.println("3. Ajouter un utilisateur");
             System.out.println("4. Modifier un utilisateur");
             System.out.println("5. Supprimer un utilisateur");
+            System.out.println(("6. Ajouter plusieurs utilisateurs (transaction)\");"));
             System.out.println("0. Quitter");
 
             // 🧭 Demande du choix à l'utilisateur
@@ -151,6 +154,59 @@ public class ConsoleMenu {
                     } else {
                         System.out.println("❌ Échec de la suppression.");
                     }
+                    break;
+
+                case 6:
+                    // Un commentaire pour décrire l'action associée à ce cas, qui est d'ajouter plusieurs utilisateurs.
+                    // ➕ Cas 6 : ajouter plusieurs utilisateurs
+
+                    // Affiche un message à l'écran pour demander à l'utilisateur combien d'utilisateurs il veut ajouter.
+                    System.out.print("Combien d'utilisateurs voulez-vous ajouter ? ");
+
+                    // Lit le nombre entier saisi par l'utilisateur et le stocke dans la variable 'nombreUtilisateurs'.
+                    int nombreUtilisateurs = scanner.nextInt();
+
+                    // Consomme la fin de ligne qui est laissée dans le tampon d'entrée après l'appel à nextInt().
+                    // C'est une étape cruciale pour éviter que le prochain appel à nextLine() ne lise une ligne vide.
+                    scanner.nextLine();
+
+                    // Crée une nouvelle liste de type 'Utilisateur'. C'est une boîte vide où l'on va stocker tous les nouveaux utilisateurs.
+                    List<Utilisateur> nouveauxUtilisateurs = new ArrayList<>();
+
+                    // Démarre une boucle 'for'. Elle va s'exécuter autant de fois que 'nombreUtilisateurs' le définit.
+                    for (int i = 0; i < nombreUtilisateurs; i++) {
+                        // Affiche un séparateur pour que l'utilisateur sache quel utilisateur il est en train d'ajouter (ex: "Utilisateur 1", "Utilisateur 2", etc.).
+                        System.out.println("--- Utilisateur " + (i + 1) + " ---");
+
+                        // Affiche une invite pour le nom de l'utilisateur.
+                        System.out.print("Nom : ");
+
+                        // Lit le nom entré par l'utilisateur et le stocke dans 'nouveauNom'.
+                        String nouveauNom = scanner.nextLine();
+
+                        // Affiche une invite pour l'email de l'utilisateur.
+                        System.out.print("Email : ");
+
+                        // Lit l'email entré par l'utilisateur et le stocke dans 'nouvelEmail'.
+                        String nouvelEmail = scanner.nextLine();
+
+                        // Crée une nouvelle instance de la classe 'Utilisateur'. On utilise '0' pour l'ID car la base de données le générera pour nous.
+                        // On ajoute ensuite cet objet à la liste 'nouveauxUtilisateurs' que l'on a créée plus tôt.
+                        nouveauxUtilisateurs.add(new Utilisateur(0, nouveauNom, nouvelEmail));
+                    }
+
+                    // Débute une instruction conditionnelle 'if'. Elle appelle la méthode 'saveAll()' du repository avec la liste d'utilisateurs.
+                    // Si la méthode 'saveAll()' retourne 'true' (ce qui signifie que la transaction a réussi)...
+                    if (repo.saveAll(nouveauxUtilisateurs)) {
+                        // Affiche un message de succès.
+                        System.out.println("✅ Les utilisateurs ont été ajoutés avec succès via une transaction.");
+                        // ...Sinon, si 'saveAll()' retourne 'false' (la transaction a échoué)...
+                    } else {
+                        // Affiche un message d'échec. C'est le cas où une erreur est survenue et la transaction a été annulée ('rollback').
+                        System.out.println("❌ Échec de la transaction. Aucun utilisateur n'a été ajouté.");
+                    }
+
+                    // Le mot-clé 'break' termine l'exécution du bloc 'switch' et renvoie le contrôle à la boucle principale du menu.
                     break;
 
                 case 0:

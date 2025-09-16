@@ -218,5 +218,107 @@ public class UserRepository {
 
         // ❌ Échec de la suppression
         return false;
+
+    }
+
+    // Déclaration de la méthode publique 'saveAll'.
+// Elle retourne 'true' si l'opération a réussi, 'false' sinon.
+// Elle prend en paramètre une liste d'objets 'Utilisateur' à sauvegarder.
+    public boolean saveAll(List<Utilisateur> utilisateurs) {
+        // Déclaration d'une chaîne de caractères (String) qui contient la requête SQL.
+        // '?' est un espace réservé pour les valeurs qui seront ajoutées plus tard.
+        String sql = "INSERT INTO utilisateurs (nom, email) VALUES (?, ?)";
+
+        // Déclaration d'une variable de type 'Connection'.
+        // Elle est initialisée à 'null' (vide).
+        // On la déclare ici pour qu'elle soit accessible dans tous les blocs (try, catch, finally).
+        Connection conn = null;
+
+        // Début d'un bloc 'try'. Le code à l'intérieur de ce bloc va être exécuté.
+        // Si une erreur (une exception) se produit, l'exécution est transférée au bloc 'catch'.
+        try {
+            // Obtient une connexion à la base de données depuis le pool de connexions (dataSource).
+            // Cette connexion est assignée à la variable 'conn'.
+            conn = dataSource.getConnection();
+
+            // Désactive le mode d'auto-validation (auto-commit).
+            // Par défaut, chaque requête SQL est automatiquement validée.
+            // Ici, nous voulons valider toutes les requêtes ensemble, à la fin, pour la transaction.
+            conn.setAutoCommit(false);
+
+            // Crée un objet 'PreparedStatement' pour exécuter la requête SQL.
+            // Un 'PreparedStatement' est plus sûr et plus rapide qu'un 'Statement' simple.
+            // 'Statement.RETURN_GENERATED_KEYS' permet de récupérer les clés (ID) générées.
+            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+            // Début d'une boucle 'for' qui parcourt chaque 'Utilisateur' de la liste 'utilisateurs'.
+            for (Utilisateur u : utilisateurs) {
+                // Associe le nom de l'utilisateur ('u.getNom()') au premier '?' de la requête SQL.
+                // C'est une méthode sécurisée pour éviter les injections SQL.
+                stmt.setString(1, u.getNom());
+                // Associe l'email de l'utilisateur ('u.getEmail()') au deuxième '?' de la requête SQL.
+                stmt.setString(2, u.getEmail());
+
+                // Ajoute la requête préparée au "batch", une sorte de "lot" de requêtes.
+                // Au lieu d'envoyer une requête à la base de données à chaque tour de boucle,
+                // on les regroupe pour les envoyer toutes en une seule fois.
+                stmt.addBatch();
+            }
+
+            // Exécute toutes les requêtes qui ont été ajoutées au batch.
+            // 'executeBatch()' est beaucoup plus performant que 'executeUpdate()' dans une boucle.
+            // Le résultat est un tableau d'entiers qui indique le nombre de lignes affectées par chaque requête.
+            int[] result = stmt.executeBatch();
+
+            // Valide la transaction.
+            // Toutes les modifications qui ont été regroupées depuis 'setAutoCommit(false)' sont maintenant
+            // rendues permanentes dans la base de données.
+            conn.commit();
+
+            // Affiche un message de succès sur la console.
+            // 'result.length' donne le nombre d'utilisateurs qui ont été insérés.
+            System.out.println("✅ Transaction réussie. " + result.length + " utilisateurs insérés.");
+
+            // Retourne 'true' pour indiquer que l'opération a réussi.
+            return true;
+
+            // Début du bloc 'catch', qui sera exécuté si une 'SQLException' se produit dans le bloc 'try'.
+        } catch (SQLException e) {
+            // Affiche un message d'erreur sur la console, avec les détails de l'erreur.
+            System.out.println("❌ Erreur de transaction : " + e.getMessage());
+
+            // Vérifie si la connexion a été établie avec succès (n'est pas 'null').
+            if (conn != null) {
+                // Début d'un nouveau bloc 'try' pour le 'rollback'.
+                try {
+                    // Annule toutes les modifications qui ont été effectuées
+                    // depuis le début de la transaction.
+                    // La base de données est remise dans son état initial.
+                    conn.rollback();
+                    // Affiche un message pour indiquer que la transaction a été annulée.
+                    System.out.println("🔄 Transaction annulée (rollback).");
+                    // Un bloc 'catch' interne pour gérer les erreurs qui pourraient survenir lors du 'rollback'.
+                } catch (SQLException rollbackEx) {
+                    System.out.println("⚠️ Erreur lors de l'annulation de la transaction : " + rollbackEx.getMessage());
+                }
+            }
+            // Retourne 'false' pour indiquer que l'opération a échoué.
+            return false;
+
+            // Début du bloc 'finally'. Ce bloc est TOUJOURS exécuté,
+            // que le code ait réussi ('try') ou qu'une erreur ait été gérée ('catch').
+        } finally {
+            // Vérifie si la connexion est valide.
+            if (conn != null) {
+                // Tente de fermer la connexion à la base de données.
+                // Cela libère les ressources et remet la connexion dans le pool HikariCP.
+                try {
+                    conn.close();
+                    // Gère les erreurs qui pourraient survenir lors de la fermeture de la connexion.
+                } catch (SQLException closeEx) {
+                    System.out.println("⚠️ Erreur lors de la fermeture de la connexion : " + closeEx.getMessage());
+                }
+            }
+        }
     }
 }
