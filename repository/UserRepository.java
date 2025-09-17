@@ -41,83 +41,98 @@ public class UserRepository {
         this.dataSource = dataSource;
     }
 
-    // 🔍 Méthode pour récupérer tous les utilisateurs de la base
-    // Elle retourne une liste d'objets Utilisateur
+    // Déclaration de la méthode publique 'findAll'.
+// Elle ne prend aucun paramètre et retourne une liste d'objets 'Utilisateur'.
     public List<Utilisateur> findAll() {
-        // 🗃️ Création d'une liste vide pour stocker les utilisateurs récupérés
+
+        // Crée une nouvelle instance de la classe 'ArrayList' pour stocker les utilisateurs.
+        // Cette liste est initialement vide.
         List<Utilisateur> utilisateurs = new ArrayList<>();
 
-        // 🧾 Requête SQL pour sélectionner toutes les lignes de la table "utilisateurs"
+        // Déclare une chaîne de caractères (String) contenant la requête SQL.
+        // La requête sélectionne toutes les colonnes ('*') de la table 'utilisateurs'.
         String sql = "SELECT * FROM utilisateurs";
 
-        // 🔁 Bloc try-with-resources : les ressources seront automatiquement fermées
+        // Débute un bloc 'try-with-resources'. C'est une fonctionnalité de Java qui assure que
+        // les ressources créées entre les parenthèses (ici, la connexion, le statement et le result set)
+        // seront automatiquement fermées à la fin du bloc, qu'il y ait une erreur ou non.
         try (
-                // 🔌 Connexion à la base via la DataSource
+                // Obtient une connexion à la base de données à partir du pool de connexions 'dataSource'.
                 Connection conn = dataSource.getConnection();
 
-                // 🧠 Préparation de la requête SQL
+                // Crée un 'PreparedStatement' à partir de la connexion et de la requête SQL.
+                // Cela prépare la requête pour l'exécution.
                 PreparedStatement stmt = conn.prepareStatement(sql);
 
-                // ▶️ Exécution de la requête et récupération du résultat
+                // Exécute la requête SQL et stocke les résultats dans un objet 'ResultSet'.
+                // Le 'ResultSet' agit comme un curseur qui pointe vers les lignes de résultats.
                 ResultSet rs = stmt.executeQuery()
         ) {
-            // 🔄 Parcours de chaque ligne du résultat
+
+            // Une boucle 'while' qui s'exécute tant qu'il y a des lignes dans le 'ResultSet'.
+            // La méthode 'rs.next()' déplace le curseur à la ligne suivante.
             while (rs.next()) {
-                // 🧱 Création d'un nouvel objet Utilisateur
-                Utilisateur u = new Utilisateur();
 
-                // 🔢 Remplissage de l'objet avec les données de la ligne
-                u.setId(rs.getInt("id"));           // Colonne "id"
-                u.setNom(rs.getString("nom"));      // Colonne "nom"
-                u.setEmail(rs.getString("email"));  // Colonne "email"
-
-                // ➕ Ajout de l'utilisateur à la liste
-                utilisateurs.add(u);
+                // Appelle la méthode 'mapResultSetToUtilisateur()' pour convertir la ligne
+                // actuelle du 'ResultSet' en un objet 'Utilisateur'.
+                // L'objet 'Utilisateur' est ensuite ajouté à la liste 'utilisateurs'.
+                utilisateurs.add(mapResultSetToUtilisateur(rs));
             }
+
+            // Un bloc 'catch' qui capture les erreurs de type 'SQLException'.
+            // Si une erreur liée à la base de données se produit, le code dans ce bloc est exécuté.
         } catch (SQLException e) {
-            // ⚠️ En cas d'erreur SQL, on affiche un message d'erreur
+
+            // Affiche un message d'erreur sur la console, y compris le message
+            // spécifique de l'exception.
             System.out.println("❌ Erreur dans findAll : " + e.getMessage());
         }
 
-        // 📤 Retour de la liste des utilisateurs
+        // Retourne la liste 'utilisateurs' qui contient tous les utilisateurs trouvés dans la base de données.
         return utilisateurs;
     }
 
-    // 🔍 Méthode pour récupérer un utilisateur par son ID
-    // Elle retourne un objet Utilisateur ou null si non trouvé
+    // 📦 Déclaration de la méthode publique 'findById'.
+// Elle prend un entier (int) 'id' en paramètre et renvoie un objet 'Utilisateur'.
     public Utilisateur findById(int id) {
-        // 🧾 Requête SQL avec un paramètre (?)
+        // 🧾 Déclaration de la requête SQL. Le '?' est un espace réservé (paramètre).
+        // Cela protège le code contre les injections SQL.
         String sql = "SELECT * FROM utilisateurs WHERE id = ?";
 
-        // 🔁 Bloc try-with-resources
+        // 🧱 Début du bloc 'try-with-resources'. Les ressources (connexion et statement)
+        // sont automatiquement fermées à la fin du bloc, même en cas d'erreur.
         try (
-                // 🔌 Connexion à la base
+                // 🔌 Obtient une connexion à la base de données à partir du pool de connexions.
                 Connection conn = dataSource.getConnection();
 
-                // 🧠 Préparation de la requête SQL
+                // 🧠 Prépare la requête SQL pour être exécutée.
+                // C'est un 'PreparedStatement' car il a des paramètres.
                 PreparedStatement stmt = conn.prepareStatement(sql)
         ) {
-            // 🧩 Remplacement du ? par la valeur de l'ID
+            // 🧩 Remplace le premier paramètre '?' par la valeur de l'ID reçue.
+            // L'indice 1 correspond au premier '?'.
             stmt.setInt(1, id);
 
-            // ▶️ Exécution de la requête
+            // 🧱 Un second 'try-with-resources' pour le 'ResultSet'.
             try (ResultSet rs = stmt.executeQuery()) {
-                // ✅ Si une ligne est trouvée
+
+                // ✅ Vérifie si la requête a renvoyé au moins une ligne.
+                // Si c'est le cas, cela signifie que l'utilisateur a été trouvé.
                 if (rs.next()) {
-                    // 🧱 Création et retour d'un objet Utilisateur rempli
-                    return new Utilisateur(
-                            rs.getInt("id"),
-                            rs.getString("nom"),
-                            rs.getString("email")
-                    );
+
+                    // ➡️ Appelle la méthode 'mapResultSetToUtilisateur' pour transformer la ligne
+                    // du 'ResultSet' en un objet 'Utilisateur' complet.
+                    return mapResultSetToUtilisateur(rs);
                 }
             }
         } catch (SQLException e) {
-            // ⚠️ Affichage de l'erreur SQL
+            // ❌ Si une erreur SQL se produit (par exemple, problème de connexion),
+            // ce bloc la capture et affiche le message d'erreur.
             System.out.println("❌ Erreur dans findById : " + e.getMessage());
         }
 
-        // ❌ Aucun utilisateur trouvé → on retourne null
+        // ⛔ Si la requête n'a renvoyé aucune ligne (l'utilisateur n'existe pas)
+        // ou si une erreur a été capturée, la méthode renvoie 'null'.
         return null;
     }
 
@@ -320,5 +335,35 @@ public class UserRepository {
                 }
             }
         }
+    }
+
+    // Déclaration de la méthode. Elle est 'private', ce qui signifie qu'elle ne peut être appelée
+    // que depuis l'intérieur de la classe 'UserRepository'.
+    // Elle retourne un objet de type 'Utilisateur'.
+    // Elle prend en paramètre un objet 'ResultSet', qui contient les résultats de la requête SQL.
+    // Le mot-clé 'throws SQLException' indique que la méthode peut générer une erreur liée à la base de données.
+    private Utilisateur mapResultSetToUtilisateur(ResultSet rs) throws SQLException {
+
+        // Crée une nouvelle instance de la classe 'Utilisateur'. C'est l'objet
+        // que nous allons remplir avec les données de la base de données.
+        Utilisateur u = new Utilisateur();
+
+        // Appelle la méthode 'setId()' de l'objet 'u'.
+        // 'rs.getInt("id")' récupère la valeur entière de la colonne 'id' de la ligne actuelle
+        // du 'ResultSet'. La colonne est identifiée par son nom.
+        u.setId(rs.getInt("id"));
+
+        // Appelle la méthode 'setNom()' de l'objet 'u'.
+        // 'rs.getString("nom")' récupère la valeur de type chaîne de caractères de la
+        // colonne 'nom' de la ligne actuelle du 'ResultSet'.
+        u.setNom(rs.getString("nom"));
+
+        // Appelle la méthode 'setEmail()' de l'objet 'u'.
+        // 'rs.getString("email")' récupère la valeur de la colonne 'email'.
+        u.setEmail(rs.getString("email"));
+
+        // Retourne l'objet 'Utilisateur' qui est maintenant entièrement
+        // rempli avec les données de la base de données.
+        return u;
     }
 }
